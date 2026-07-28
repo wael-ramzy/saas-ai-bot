@@ -1,0 +1,11 @@
+Set-Content -Path .gitignore -Value @"
+.env
+.env.*
+node_modules/
+.wwebjs_auth/
+.wwebjs_cache/
+data/
+*.qr.png
+logs/
+*.log
+"@
