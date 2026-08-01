@@ -1,0 +1,7 @@
+module.exports = {
+    MAX_MESSAGES_PER_MINUTE: 10,
+    MAX_SESSION_MESSAGES: 20,
+    SESSION_CLEANUP_INTERVAL: 60 * 60 * 1000,
+    GROQ_MODEL: 'llama-3.3-70b-versatile',
+    GROQ_TEMPERATURE: 0.5
+};
