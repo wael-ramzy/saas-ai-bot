@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل تاجر جديد — SaaS AI Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        .step-active { background: #2563eb; color: white; border-color: #2563eb; }
+        .step-done { background: #22c55e; color: white; border-color: #22c55e; }
+        .step-inactive { background: #f1f5f9; color: #94a3b8; border-color: #cbd5e1; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen" x-data="onboardPage()">
+    
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl">
+            
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center gap-3 mb-4">
+                    <i class="fas fa-robot text-4xl text-primary-600"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800">تسجيل تاجر جديد</h1>
+                <p class="text-gray-500 mt-2">أدخل بيانات البزنس مرة واحدة — والبوت يتولى الباقي</p>
+            </div>
+
+            <!-- Steps Indicator -->
+            <div class="flex items-center justify-center gap-4 mb-8">
+                <template x-for="(step, i) in steps" :key="i">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all"
+                             :class="currentStep > i + 1 ? 'step-done' : (currentStep === i + 1 ? 'step-active' : 'step-inactive')">
+                            <span x-show="currentStep > i + 1"><i class="fas fa-check"></i></span>
+                            <span x-show="currentStep <= i + 1" x-text="i + 1"></span>
+                        </div>
+                        <span class="text-xs text-gray-500 hidden sm:block" x-text="step.label"></span>
+                        <div x-show="i < steps.length - 1" class="w-8 h-px bg-gray-300"></div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Form Card -->
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+                <form @submit.prevent="submit()">
+                    
+                    <!-- ═══ STEP 1: Basic Info ═══ -->
+                    <div x-show="currentStep === 1" class="fade-in space-y-6">
+                        <h3 class="text-lg font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-store text-primary-500"></i>
+                            معلومات البزنس
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">اسم البزنس *</label>
+                                <input type="text" x-model="form.client_name" required placeholder="مثال: مطعم السultan" 
+                                       class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-300 focus:border-primary-400 focus:outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">نوع النشاط *</label>
+                                <select x-model="form.business_type" required class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-300 focus:outline-none">
+                                    <option value="restaurant">🍽️ مطعم</option>
+                                    <option value="clinic">🏥 عيادة</option>
+                                    <option value="store">🛍️ متجر</option>
+                                    <option value="salon">💇 صالون</option>
+                                    <option value="gym">💪 جيم</option>
+                                    <option value="base">🏢 عام</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">وصف مختصر للبزنس</label>
+                            <textarea x-model="form.business_description" rows="3" placeholder="مثال: مطعم متخصص في الأكلات المصرية التقليدية، توصيل سريع..."
+                                      class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-300 focus:outline-none resize-none"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">ساعات العمل</label>
+                                <input type="text" x-model="form.working_hours" placeholder="مثال: 9 صباحاً - 12 منتصف الليل"
+                                       class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-300 focus:outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">العنوان</label>
+                                <input type="text" x-model="form.address" placeholder="مثال: القاهرة، مدينة نصر"
+                                       class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-300 focus:outline-none" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">السياسات (توصيل، دفع، إرجاع)</label>
+                            <textarea x-model="form.policies" rows="3" placeholder="مثال: التوصيل مجاني فوق 200 ج.م، الدفع نقداً أو فيزا عند الاستلام..."
+                                      class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-300 focus:outline-none resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- ═══ STEP 2: Menu & FAQs ═══ -->
+                    <div x-show="currentStep === 2" class="fade-in space-y-6">
+                        <h3 class="text-lg font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-list text-primary-500"></i>
+                            المنيو / الخدمات والأسئلة الشائعة
+                        </h3>
+                        
+                        <!-- Menu Items -->
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <label class="text-sm font-medium text-gray-600">الأصناف / الخدمات</label>
+                                <button type="button" @click="addMenuItem()" class="text-sm text-primary-500 hover:text-primary-700 font-medium">
+                                    <i class="fas fa-plus ml-1"></i> إضافة صنف
+                                </button>
+                            </div>
+                            <div class="space-y-3">
+                                <template x-for="(item, index) in form.menu_items" :key="index">
+                                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <div class="grid grid-cols-12 gap-3">
+                                            <input type="text" x-model="item.name" placeholder="اسم الصنف *" required class="col-span-4 p-2 border rounded-lg text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                            <input type="text" x-model="item.category" placeholder="القسم" class="col-span-3 p-2 border rounded-lg text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                            <input type="text" x-model="item.description" placeholder="الوصف" class="col-span-3 p-2 border rounded-lg text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                            <input type="number" x-model="item.price" placeholder="السعر" class="col-span-1 p-2 border rounded-lg text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                            <button type="button" @click="removeMenuItem(index)" class="col-span-1 text-red-400 hover:text-red-600 flex items-center justify-center">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <p x-show="form.menu_items.length === 0" class="text-sm text-gray-400 text-center py-4">
+                                أضف أصناف المنيو أو الخدمات — يمكنك أيضاً رفعها لاحقاً
+                            </p>
+                        </div>
+
+                        <!-- FAQs -->
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <label class="text-sm font-medium text-gray-600">الأسئلة الشائعة (FAQs)</label>
+                                <button type="button" @click="addFaq()" class="text-sm text-primary-500 hover:text-primary-700 font-medium">
+                                    <i class="fas fa-plus ml-1"></i> إضافة سؤال
+                                </button>
+                            </div>
+                            <div class="space-y-3">
+                                <template x-for="(faq, index) in form.faqs" :key="index">
+                                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <input type="text" x-model="faq.question" placeholder="السؤال *" class="w-full p-2 border rounded-lg text-sm mb-2 focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                        <textarea x-model="faq.answer" placeholder="الإجابة" rows="2" class="w-full p-2 border rounded-lg text-sm resize-none focus:ring-1 focus:ring-primary-300 focus:outline-none"></textarea>
+                                        <button type="button" @click="removeFaq(index)" class="mt-2 text-red-400 hover:text-red-600 text-xs">
+                                            <i class="fas fa-trash-alt ml-1"></i> حذف
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══ STEP 3: Channels ═══ -->
+                    <div x-show="currentStep === 3" class="fade-in space-y-6">
+                        <h3 class="text-lg font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-plug text-primary-500"></i>
+                            ربط القنوات (اختياري — يمكن إضافته لاحقاً)
+                        </h3>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+                            <i class="fas fa-info-circle ml-1"></i>
+                            يمكنك ربط القنوات الآن أو لاحقاً من لوحة التحكم. المنصة ستعمل فوراً حتى بدون ربط.
+                        </div>
+
+                        <!-- WhatsApp -->
+                        <div class="border border-gray-200 rounded-xl p-5">
+                            <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fab fa-whatsapp text-green-500 text-lg"></i>
+                                واتساب
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Phone Number ID</label>
+                                    <input type="text" x-model="form.meta_phone_id" placeholder="مثال: 123456789012345"
+                                           class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Access Token</label>
+                                    <input type="password" x-model="form.meta_access_token" placeholder="EAAG..."
+                                           class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Messenger -->
+                        <div class="border border-gray-200 rounded-xl p-5">
+                            <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fab fa-facebook-messenger text-blue-500 text-lg"></i>
+                                ماسنجر (فيسبوك)
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Page ID</label>
+                                    <input type="text" x-model="form.meta_page_id" placeholder="مثال: 123456789012345"
+                                           class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Instagram -->
+                        <div class="border border-gray-200 rounded-xl p-5">
+                            <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fab fa-instagram text-pink-500 text-lg"></i>
+                                إنستجرام
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Instagram Account ID</label>
+                                    <input type="text" x-model="form.meta_ig_account_id" placeholder="مثال: 17841400008460056"
+                                           class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Telegram -->
+                        <div class="border border-gray-200 rounded-xl p-5">
+                            <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fab fa-telegram text-blue-400 text-lg"></i>
+                                تليجرام (إشعارات الطلبات)
+                            </h4>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Chat ID</label>
+                                <input type="text" x-model="form.telegram_chat_id" placeholder="مثال: 123456789"
+                                       class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-primary-300 focus:outline-none" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══ STEP 4: Confirm ═══ -->
+                    <div x-show="currentStep === 4" class="fade-in space-y-6">
+                        <h3 class="text-lg font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-check-circle text-primary-500"></i>
+                            تأكيد البيانات
+                        </h3>
+                        
+                        <div class="bg-gray-50 rounded-xl p-6 space-y-4">
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-400">الاسم:</span>
+                                    <span class="font-bold text-gray-700 mr-2" x-text="form.client_name"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">النوع:</span>
+                                    <span class="font-bold text-gray-700 mr-2" x-text="businessTypeLabel(form.business_type)"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-gray-400 text-sm">عدد الأصناف:</span>
+                                <span class="font-bold text-gray-700 mr-2" x-text="form.menu_items.length"></span>
+                            </div>
+                            <div>
+                                <span class="text-gray-400 text-sm">عدد الأسئلة الشائعة:</span>
+                                <span class="font-bold text-gray-700 mr-2" x-text="form.faqs.length"></span>
+                            </div>
+                            <div>
+                                <span class="text-gray-400 text-sm">القنوات المرتبطة:</span>
+                                <span class="font-bold text-gray-700 mr-2" x-text="connectedChannelsCount()"></span>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700">
+                            <i class="fas fa-check-circle ml-1"></i>
+                            بعد التسجيل سيتم: إنشاء حساب التاجر + فهرسة المنيو في نظام RAG + تفعيل البوت تلقائياً
+                        </div>
+                    </div>
+
+                    <!-- ═══ Navigation Buttons ═══ -->
+                    <div class="flex justify-between mt-8 pt-6 border-t border-gray-100">
+                        <button type="button" x-show="currentStep > 1" @click="currentStep--" 
+                                class="px-6 py-3 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50 transition-all font-medium">
+                            <i class="fas fa-arrow-right ml-2"></i> السابق
+                        </button>
+                        <div x-show="currentStep <= 1"></div>
+                        
+                        <button type="button" x-show="currentStep < 4" @click="currentStep++" 
+                                :disabled="!canProceed()"
+                                :class="canProceed() ? 'bg-primary-500 hover:bg-primary-600 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                                class="px-6 py-3 rounded-xl transition-all font-medium">
+                            التالي <i class="fas fa-arrow-left mr-2"></i>
+                        </button>
+                        
+                        <button type="submit" x-show="currentStep === 4"
+                                :disabled="submitting"
+                                :class="submitting ? 'bg-gray-300 cursor-wait' : 'bg-green-500 hover:bg-green-600'"
+                                class="px-8 py-3 rounded-xl text-white transition-all font-bold">
+                            <i class="fas fa-rocket ml-2"></i>
+                            <span x-text="submitting ? 'جاري التسجيل...' : 'تسجيل وتشغيل البوت'"></span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Result Message -->
+                <div x-show="result" class="mt-6 p-4 rounded-xl fade-in" :class="result.success ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'">
+                    <p x-text="result?.message"></p>
+                    <a x-show="result?.success" href="/dashboard" class="text-primary-500 underline text-sm mt-2 inline-block">
+                        <i class="fas fa-arrow-left ml-1"></i> الذهاب للوحة التحكم
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function onboardPage() {
+            return {
+                currentStep: 1,
+                steps: [
+                    { label: 'معلومات البزنس' },
+                    { label: 'المنيو والأسئلة' },
+                    { label: 'ربط القنوات' },
+                    { label: 'تأكيد' }
+                ],
+                submitting: false,
+                result: null,
+                
+                form: {
+                    client_name: '',
+                    business_type: 'restaurant',
+                    business_description: '',
+                    working_hours: '',
+                    address: '',
+                    policies: '',
+                    menu_items: [],
+                    faqs: [],
+                    whatsapp_number: '',
+                    meta_phone_id: '',
+                    meta_access_token: '',
+                    meta_page_id: '',
+                    meta_ig_account_id: '',
+                    telegram_chat_id: ''
+                },
+                
+                addMenuItem() {
+                    this.form.menu_items.push({ name: '', category: '', description: '', price: '', keywords: [] });
+                },
+                removeMenuItem(index) {
+                    this.form.menu_items.splice(index, 1);
+                },
+                addFaq() {
+                    this.form.faqs.push({ question: '', answer: '' });
+                },
+                removeFaq(index) {
+                    this.form.faqs.splice(index, 1);
+                },
+                
+                canProceed() {
+                    if (this.currentStep === 1) return this.form.client_name.trim().length > 0;
+                    return true;
+                },
+                
+                businessTypeLabel(type) {
+                    const labels = { restaurant: 'مطعم', clinic: 'عيادة', store: 'متجر', salon: 'صالون', gym: 'جيم', base: 'عام', other: 'أخرى' };
+                    return labels[type] || type;
+                },
+                
+                connectedChannelsCount() {
+                    let count = 0;
+                    if (this.form.meta_phone_id) count++;
+                    if (this.form.meta_page_id) count++;
+                    if (this.form.meta_ig_account_id) count++;
+                    if (this.form.telegram_chat_id) count++;
+                    return count + ' قناة';
+                },
+                
+                async submit() {
+                    this.submitting = true;
+                    this.result = null;
+                    
+                    try {
+                        const res = await fetch('/api/onboard', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.form)
+                        });
+                        const data = await res.json();
+                        
+                        if (data.success) {
+                            this.result = {
+                                success: true,
+                                message: `تم تسجيل "${data.client_name}" بنجاح! المنيو تم فهرسته (${data.menu_indexed}). البوت يعمل الآن.`
+                            };
+                        } else {
+                            this.result = { success: false, message: data.error || 'حدث خطأ أثناء التسجيل' };
+                        }
+                    } catch (err) {
+                        this.result = { success: false, message: err.message };
+                    }
+                    
+                    this.submitting = false;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

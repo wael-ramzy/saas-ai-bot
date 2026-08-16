@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المنصة — SaaS AI Bot</title>
+    
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- Google Fonts: Cairo (Arabic) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+                        dark: { 800:'#1e293b',900:'#0f172a' },
+                        success: { 50:'#f0fdf4',500:'#22c55e',600:'#16a34a' },
+                        warning: { 50:'#fffbeb',500:'#f59e0b',600:'#d97706' },
+                        danger: { 50:'#fef2f2',500:'#ef4444',600:'#dc2626' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+        .chat-bubble-user { background: #2563eb; color: white; border-radius: 16px 16px 4px 16px; }
+        .chat-bubble-bot { background: #f1f5f9; color: #1e293b; border-radius: 16px 16px 16px 4px; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen" x-data="dashboard()">
+    
+    <!-- ═══ SIDEBAR ═══ -->
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-72 bg-dark-900 text-white flex flex-col shadow-2xl">
+            <!-- Logo -->
+            <div class="p-6 border-b border-gray-700">
+                <h1 class="text-2xl font-bold flex items-center gap-3">
+                    <i class="fas fa-robot text-primary-400"></i>
+                    <span>SaaS AI Bot</span>
+                </h1>
+                <p class="text-gray-400 text-sm mt-1">لوحة تحكم المنصة</p>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <button @click="view = 'overview'" :class="view === 'overview' ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-700'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all">
+                    <i class="fas fa-chart-pie w-5"></i>
+                    <span>نظرة عامة</span>
+                </button>
+                <button @click="view = 'clients'" :class="view === 'clients' ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-700'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all">
+                    <i class="fas fa-store w-5"></i>
+                    <span>التجار</span>
+                </button>
+                <button @click="view = 'conversations'" :class="view === 'conversations' ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-700'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all">
+                    <i class="fas fa-comments w-5"></i>
+                    <span>المحادثات</span>
+                </button>
+                <button @click="view = 'orders'" :class="view === 'orders' ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-700'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all">
+                    <i class="fas fa-shopping-cart w-5"></i>
+                    <span>الطلبات</span>
+                </button>
+                <button @click="view = 'customers'" :class="view === 'customers' ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-700'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all">
+                    <i class="fas fa-users w-5"></i>
+                    <span>العملاء</span>
+                </button>
+                <button @click="view = 'onboard'" :class="view === 'onboard' ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-700'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all">
+                    <i class="fas fa-user-plus w-5"></i>
+                    <span>إضافة تاجر</span>
+                </button>
+            </nav>
+            
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-700">
+                <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <i class="fas fa-circle text-success-500 text-xs animate-pulse"></i>
+                    <span>النظام يعمل</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ═══ MAIN CONTENT ═══ -->
+        <main class="flex-1 overflow-y-auto bg-gray-50">
+            <!-- Top Bar -->
+            <div class="bg-white shadow-sm px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+                <h2 class="text-xl font-bold text-gray-800" x-text="viewTitles[view]"></h2>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-500" x-text="new Date().toLocaleDateString('ar')"></span>
+                    <div class="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm font-bold">W</div>
+                </div>
+            </div>
+
+            <div class="p-8">
+                
+                <!-- ═══════════════════════════════════════════ -->
+                <!-- VIEW: OVERVIEW -->
+                <!-- ═══════════════════════════════════════════ -->
+                <div x-show="view === 'overview'" class="fade-in space-y-6" x-cloak>
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500">التجار النشطين</p>
+                                    <p class="text-3xl font-bold text-gray-800 mt-1" x-text="stats.active_clients">0</p>
+                                </div>
+                                <div class="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-store text-primary-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500">إجمالي الطلبات</p>
+                                    <p class="text-3xl font-bold text-gray-800 mt-1" x-text="stats.total_orders">0</p>
+                                </div>
+                                <div class="w-12 h-12 bg-success-50 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-shopping-cart text-success-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500">المحادثات</p>
+                                    <p class="text-3xl font-bold text-gray-800 mt-1" x-text="stats.total_conversations">0</p>
+                                </div>
+                                <div class="w-12 h-12 bg-warning-50 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-comments text-warning-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500">طلبات اليوم</p>
+                                    <p class="text-3xl font-bold text-gray-800 mt-1" x-text="stats.today_orders">0</p>
+                                </div>
+                                <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-bolt text-purple-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">
+                            <i class="fas fa-clock-rotate-left text-primary-500 ml-2"></i>
+                            آخر النشاطات
+                        </h3>
+                        <div class="space-y-3" x-show="logs.length === 0">
+                            <p class="text-gray-400 text-center py-8">لا توجد نشاطات بعد</p>
+                        </div>
+                        <div class="space-y-3" x-show="logs.length > 0">
+                            <template x-for="log in logs.slice(0, 10)" :key="log.id">
+                                <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                                    <div class="w-2 h-2 bg-primary-500 rounded-full"></div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-gray-700" x-text="log.message || log.raw"></p>
+                                    </div>
+                                    <span class="text-xs text-gray-400" x-text="formatDate(log.created_at)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════ -->
+                <!-- VIEW: CLIENTS -->
+                <!-- ═══════════════════════════════════════════ -->
+                <div x-show="view === 'clients'" class="fade-in space-y-6" x-cloak>
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-gray-700">قائمة التجار</h3>
+                        <button @click="view = 'onboard'" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm transition-all">
+                            <i class="fas fa-plus ml-1"></i> إضافة تاجر
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="client in clients" :key="client.client_id">
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-store text-primary-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800" x-text="client.client_name"></h4>
+                                            <span class="text-xs text-gray-400" x-text="businessTypeLabel(client.business_type)"></span>
+                                        </div>
+                                    </div>
+                                    <span class="w-3 h-3 rounded-full" :class="client.is_active ? 'bg-green-400' : 'bg-gray-300'"></span>
+                                </div>
+                                
+                                <div class="grid grid-cols-3 gap-2 text-center mt-4">
+                                    <div class="bg-gray-50 rounded-lg p-2">
+                                        <p class="text-lg font-bold text-gray-700" x-text="client.orders_count"></p>
+                                        <p class="text-xs text-gray-400">طلب</p>
+                                    </div>
+                                    <div class="bg-gray-50 rounded-lg p-2">
+                                        <p class="text-lg font-bold text-gray-700" x-text="client.conversations_count"></p>
+                                        <p class="text-xs text-gray-400">محادثة</p>
+                                    </div>
+                                    <div class="bg-gray-50 rounded-lg p-2">
+                                        <p class="text-lg font-bold text-gray-700" x-text="client.channels?.length || 0"></p>
+                                        <p class="text-xs text-gray-400">قناة</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 flex gap-2">
+                                    <button @click="selectClientForConversations(client)" class="flex-1 text-xs bg-primary-50 text-primary-600 py-2 rounded-lg hover:bg-primary-100 transition-all">
+                                        <i class="fas fa-comments ml-1"></i> المحادثات
+                                    </button>
+                                    <button @click="selectClientForOrders(client)" class="flex-1 text-xs bg-success-50 text-success-600 py-2 rounded-lg hover:bg-success-100 transition-all">
+                                        <i class="fas fa-shopping-cart ml-1"></i> الطلبات
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div x-show="clients.length === 0" class="text-center py-16">
+                        <i class="fas fa-store text-6xl text-gray-200 mb-4"></i>
+                        <p class="text-gray-400">لا يوجد تجار بعد. أضف أول تاجر!</p>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════ -->
+                <!-- VIEW: CONVERSATIONS -->
+                <!-- ═══════════════════════════════════════════ -->
+                <div x-show="view === 'conversations'" class="fade-in h-[calc(100vh-180px)]" x-cloak>
+                    <div class="grid grid-cols-12 gap-6 h-full">
+                        <!-- Conversations List -->
+                        <div class="col-span-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+                            <div class="p-4 border-b border-gray-100">
+                                <h3 class="font-bold text-gray-700">
+                                    <span x-text="selectedClient?.client_name || 'اختر تاجر'"></span>
+                                </h3>
+                                <select x-model="convClientId" @change="loadConversations()" class="w-full mt-2 p-2 border rounded-lg text-sm">
+                                    <option value="">-- اختر تاجر --</option>
+                                    <template x-for="c in clients" :key="c.client_id">
+                                        <option :value="c.client_id" x-text="c.client_name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-1">
+                                <template x-for="conv in conversations" :key="conv.conv_id">
+                                    <button @click="selectConversation(conv)" :class="activeConvId === conv.conv_id ? 'bg-primary-50 border-primary-300' : 'hover:bg-gray-50'" class="w-full text-right p-3 rounded-lg border border-transparent transition-all">
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas fa-user-circle text-gray-300"></i>
+                                            <span class="text-sm font-medium text-gray-700" x-text="conv.customer_phone"></span>
+                                            <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500" x-text="conv.platform"></span>
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1" x-text="formatDate(conv.updated_at)"></p>
+                                    </button>
+                                </template>
+                                <div x-show="conversations.length === 0 && convClientId" class="text-center py-8 text-gray-400 text-sm">
+                                    لا توجد محادثات
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat View -->
+                        <div class="col-span-8 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                            <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-comments text-primary-500"></i>
+                                    <span class="font-bold text-gray-700" x-text="activeConversation?.customer_phone || 'اختر محادثة'"></span>
+                                </div>
+                            </div>
+                            
+                            <!-- Messages -->
+                            <div class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin" id="chat-messages">
+                                <template x-for="msg in chatMessages" :key="msg.timestamp || $index">
+                                    <div class="flex" :class="msg.role === 'user' ? 'justify-start' : 'justify-end'">
+                                        <div class="max-w-[70%] px-4 py-2 text-sm" :class="msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-bot'">
+                                            <p x-text="msg.content || msg.message || msg.text"></p>
+                                            <p class="text-[10px] mt-1 opacity-60" x-text="formatTime(msg.timestamp || msg.created_at)"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="chatMessages.length === 0 && activeConversation" class="text-center py-16 text-gray-400">
+                                    <i class="fas fa-comments text-4xl mb-4"></i>
+                                    <p>لا توجد رسائل</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Reply Input -->
+                            <div class="p-4 border-t border-gray-100">
+                                <div class="flex gap-2">
+                                    <input type="text" x-model="replyText" @keyup.enter="sendReply()" placeholder="اكتب رد..." class="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-primary-300 focus:outline-none" />
+                                    <button @click="sendReply()" class="bg-primary-500 hover:bg-primary-600 text-white px-6 py-3 rounded-lg transition-all">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════ -->
+                <!-- VIEW: ORDERS -->
+                <!-- ═══════════════════════════════════════════ -->
+                <div x-show="view === 'orders'" class="fade-in space-y-6" x-cloak>
+                    <div class="flex items-center gap-4">
+                        <select x-model="orderClientId" @change="loadOrders()" class="p-3 border rounded-lg">
+                            <option value="">-- كل التجار --</option>
+                            <template x-for="c in clients" :key="c.client_id">
+                                <option :value="c.client_id" x-text="c.client_name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">#</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">التاجر</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">العميل</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">التفاصيل</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">الإجمالي</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">الحالة</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">القناة</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">التاريخ</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50">
+                                <template x-for="order in orders" :key="order.order_id">
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="p-4 text-sm text-gray-500" x-text="order.order_number"></td>
+                                        <td class="p-4 text-sm text-gray-700" x-text="getClientName(order.client_id)"></td>
+                                        <td class="p-4 text-sm text-gray-700">
+                                            <p x-text="order.customer_name || '—'"></p>
+                                            <p class="text-xs text-gray-400" x-text="order.customer_phone"></p>
+                                        </td>
+                                        <td class="p-4 text-sm text-gray-600 max-w-48 truncate" x-text="order.order_details"></td>
+                                        <td class="p-4 text-sm font-bold text-gray-800" x-text="order.total + ' ج.م'"></td>
+                                        <td class="p-4">
+                                            <select @change="updateOrderStatus(order.order_id, $event.target.value)" :class="statusColor(order.status)" class="text-xs p-1 rounded border-0 focus:ring-0 cursor-pointer">
+                                                <option value="new" x-text="'جديد'"></option>
+                                                <option value="confirmed" x-text="'مؤكد'"></option>
+                                                <option value="preparing" x-text="'قيد التحضير'"></option>
+                                                <option value="delivered" x-text="'تم التوصيل'"></option>
+                                                <option value="cancelled" x-text="'ملغي'"></option>
+                                            </select>
+                                        </td>
+                                        <td class="p-4 text-xs text-gray-500" x-text="order.platform"></td>
+                                        <td class="p-4 text-xs text-gray-400" x-text="formatDate(order.created_at)"></td>
+                                        <td class="p-4">
+                                            <button @click="showOrderDetails(order)" class="text-primary-500 hover:text-primary-700 text-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <div x-show="orders.length === 0" class="text-center py-12 text-gray-400">
+                            <i class="fas fa-shopping-cart text-4xl mb-4"></i>
+                            <p>لا توجد طلبات</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════ -->
+                <!-- VIEW: CUSTOMERS -->
+                <!-- ═══════════════════════════════════════════ -->
+                <div x-show="view === 'customers'" class="fade-in space-y-6" x-cloak>
+                    <select x-model="custClientId" @change="loadCustomers()" class="p-3 border rounded-lg">
+                        <option value="">-- اختر تاجر --</option>
+                        <template x-for="c in clients" :key="c.client_id">
+                            <option :value="c.client_id" x-text="c.client_name"></option>
+                        </template>
+                    </select>
+                    
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">الرقم</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">الاسم</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">القناة</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">عدد الزيارات</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">آخر طلب</th>
+                                    <th class="text-right p-4 text-sm font-bold text-gray-600">آخر رسالة</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50">
+                                <template x-for="cust in customers" :key="cust.customer_id">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="p-4 text-sm text-gray-700 font-mono" x-text="cust.customer_phone"></td>
+                                        <td class="p-4 text-sm text-gray-700" x-text="cust.customer_name || '—'"></td>
+                                        <td class="p-4 text-xs" x-text="cust.platform"></td>
+                                        <td class="p-4 text-sm font-bold text-gray-800" x-text="cust.visit_count"></td>
+                                        <td class="p-4 text-xs text-gray-500" x-text="cust.last_order || '—'"></td>
+                                        <td class="p-4 text-xs text-gray-400" x-text="formatDate(cust.last_message_at)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <div x-show="customers.length === 0" class="text-center py-12 text-gray-400">
+                            <i class="fas fa-users text-4xl mb-4"></i>
+                            <p>لا يوجد عملاء</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════ -->
+                <!-- VIEW: ONBOARD -->
+                <!-- ═══════════════════════════════════════════ -->
+                <div x-show="view === 'onboard'" class="fade-in space-y-6" x-cloak>
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 max-w-2xl">
+                        <h3 class="text-xl font-bold text-gray-800 mb-6">
+                            <i class="fas fa-user-plus text-primary-500 ml-2"></i>
+                            تسجيل تاجر جديد
+                        </h3>
+                        
+                        <form @submit.prevent="submitOnboard()" class="space-y-6">
+                            <!-- Business Info -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-600 mb-1">اسم البزنس *</label>
+                                    <input type="text" x-model="onboardForm.client_name" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-primary-300 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-600 mb-1">نوع النشاط *</label>
+                                    <select x-model="onboardForm.business_type" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-primary-300 focus:outline-none">
+                                        <option value="restaurant">مطعم</option>
+                                        <option value="clinic">عيادة</option>
+                                        <option value="store">متجر</option>
+                                        <option value="salon">صالون</option>
+                                        <option value="gym">جيم</option>
+                                        <option value="base">عام</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">رقم الواتساب</label>
+                                <input type="text" x-model="onboardForm.whatsapp_number" placeholder="201234567890" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-primary-300 focus:outline-none" />
+                            </div>
+
+                            <!-- Menu Items -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">المنيو / الخدمات</label>
+                                <div class="space-y-2">
+                                    <template x-for="(item, index) in onboardForm.menu_items" :key="index">
+                                        <div class="flex gap-2 items-start">
+                                            <input type="text" x-model="item.name" placeholder="اسم الصنف" class="flex-1 p-2 border rounded text-sm" />
+                                            <input type="text" x-model="item.description" placeholder="الوصف" class="flex-1 p-2 border rounded text-sm" />
+                                            <input type="number" x-model="item.price" placeholder="السعر" class="w-24 p-2 border rounded text-sm" />
+                                            <button type="button" @click="removeMenuItem(index)" class="text-red-400 hover:text-red-600 p-2">
+                                                <i class="fas fa-trash text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button type="button" @click="addMenuItem()" class="mt-2 text-sm text-primary-500 hover:text-primary-700">
+                                    <i class="fas fa-plus ml-1"></i> إضافة صنف
+                                </button>
+                            </div>
+
+                            <!-- FAQs -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">الأسئلة الشائعة (FAQs)</label>
+                                <div class="space-y-2">
+                                    <template x-for="(faq, index) in onboardForm.faqs" :key="index">
+                                        <div class="flex gap-2 items-start">
+                                            <input type="text" x-model="faq.question" placeholder="السؤال" class="flex-1 p-2 border rounded text-sm" />
+                                            <input type="text" x-model="faq.answer" placeholder="الإجابة" class="flex-1 p-2 border rounded text-sm" />
+                                            <button type="button" @click="removeFaq(index)" class="text-red-400 hover:text-red-600 p-2">
+                                                <i class="fas fa-trash text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button type="button" @click="addFaq()" class="mt-2 text-sm text-primary-500 hover:text-primary-700">
+                                    <i class="fas fa-plus ml-1"></i> إضافة سؤال
+                                </button>
+                            </div>
+
+                            <!-- Meta Channel -->
+                            <div class="border-t pt-4">
+                                <h4 class="font-bold text-gray-700 mb-3">
+                                    <i class="fab fa-whatsapp text-green-500 ml-1"></i> ربط قناة واتساب (Meta)
+                                </h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm text-gray-500 mb-1">Phone Number ID</label>
+                                        <input type="text" x-model="onboardForm.meta_phone_id" class="w-full p-3 border rounded-lg text-sm" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-500 mb-1">Access Token</label>
+                                        <input type="password" x-model="onboardForm.meta_access_token" class="w-full p-3 border rounded-lg text-sm" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Telegram -->
+                            <div>
+                                <label class="block text-sm text-gray-500 mb-1">Telegram Chat ID (لإشعارات الطلبات)</label>
+                                <input type="text" x-model="onboardForm.telegram_chat_id" class="w-full p-3 border rounded-lg text-sm" />
+                            </div>
+
+                            <!-- Submit -->
+                            <button type="submit" class="w-full bg-primary-500 hover:bg-primary-600 text-white py-3 rounded-lg font-bold transition-all">
+                                <i class="fas fa-rocket ml-2"></i> تسجيل التاجر وتشغيل البوت
+                            </button>
+                        </form>
+                        
+                        <!-- Success/Error Messages -->
+                        <div x-show="onboardResult" class="mt-4 p-4 rounded-lg" :class="onboardResult.success ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600'">
+                            <p x-text="onboardResult?.message"></p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ═══ ALPINE.JS DATA ═══ -->
+    <script>
+        function dashboard() {
+            return {
+                view: 'overview',
+                viewTitles: {
+                    overview: 'نظرة عامة',
+                    clients: 'التجار',
+                    conversations: 'المحادثات',
+                    orders: 'الطلبات',
+                    customers: 'العملاء',
+                    onboard: 'إضافة تاجر'
+                },
+                
+                // Data
+                stats: { active_clients: 0, total_orders: 0, total_conversations: 0, today_orders: 0 },
+                clients: [],
+                conversations: [],
+                chatMessages: [],
+                orders: [],
+                customers: [],
+                logs: [],
+                
+                // Selection
+                convClientId: '',
+                activeConvId: '',
+                activeConversation: null,
+                selectedClient: null,
+                orderClientId: '',
+                custClientId: '',
+                replyText: '',
+                
+                // Onboarding
+                onboardForm: {
+                    client_name: '',
+                    business_type: 'restaurant',
+                    whatsapp_number: '',
+                    menu_items: [],
+                    faqs: [],
+                    meta_phone_id: '',
+                    meta_access_token: '',
+                    telegram_chat_id: ''
+                },
+                onboardResult: null,
+                
+                async init() {
+                    await this.loadStats();
+                    await this.loadClients();
+                    await this.loadLogs();
+                },
+                
+                // ═══ API Calls ═══
+                async api(url) {
+                    try {
+                        const res = await fetch(url);
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        return await res.json();
+                    } catch (err) {
+                        console.error('API Error:', err);
+                        return null;
+                    }
+                },
+                
+                async loadStats() {
+                    const data = await this.api('/api/dashboard/stats');
+                    if (data) this.stats = data;
+                },
+                
+                async loadClients() {
+                    const data = await this.api('/api/dashboard/clients');
+                    if (data) this.clients = data;
+                },
+                
+                async loadLogs() {
+                    const data = await this.api('/api/dashboard/logs');
+                    if (data) this.logs = data;
+                },
+                
+                async loadConversations() {
+                    if (!this.convClientId) { this.conversations = []; return; }
+                    const data = await this.api(`/api/dashboard/clients/${this.convClientId}/conversations`);
+                    if (data) this.conversations = data;
+                },
+                
+                async selectConversation(conv) {
+                    this.activeConvId = conv.conv_id;
+                    this.activeConversation = conv;
+                    const data = await this.api(`/api/dashboard/conversations/${conv.conv_id}/messages`);
+                    if (data) {
+                        this.chatMessages = data.messages || [];
+                        // Scroll to bottom
+                        this.$nextTick(() => {
+                            const el = document.getElementById('chat-messages');
+                            if (el) el.scrollTop = el.scrollHeight;
+                        });
+                    }
+                },
+                
+                async sendReply() {
+                    if (!this.replyText.trim() || !this.activeConvId) return;
+                    const text = this.replyText;
+                    this.replyText = '';
+                    
+                    const data = await this.api(`/api/dashboard/conversations/${this.activeConvId}/reply`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text })
+                    });
+                    
+                    if (data && data.success) {
+                        // Refresh messages
+                        await this.selectConversation(this.activeConversation);
+                    } else {
+                        alert('فشل إرسال الرد');
+                    }
+                },
+                
+                async loadOrders() {
+                    if (!this.orderClientId) { this.orders = []; return; }
+                    const data = await this.api(`/api/dashboard/clients/${this.orderClientId}/orders`);
+                    if (data) this.orders = data;
+                },
+                
+                async updateOrderStatus(orderId, status) {
+                    await fetch(`/api/dashboard/orders/${orderId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status })
+                    });
+                },
+                
+                async loadCustomers() {
+                    if (!this.custClientId) { this.customers = []; return; }
+                    const data = await this.api(`/api/dashboard/clients/${this.custClientId}/customers`);
+                    if (data) this.customers = data;
+                },
+                
+                // ═══ Helpers ═══
+                getClientName(clientId) {
+                    const c = this.clients.find(x => x.client_id === clientId);
+                    return c?.client_name || '—';
+                },
+                
+                businessTypeLabel(type) {
+                    const labels = { restaurant: 'مطعم', clinic: 'عيادة', store: 'متجر', salon: 'صالون', gym: 'جيم', base: 'عام', other: 'أخرى' };
+                    return labels[type] || type;
+                },
+                
+                statusColor(status) {
+                    const colors = { new: 'bg-blue-100 text-blue-700', confirmed: 'bg-yellow-100 text-yellow-700', preparing: 'bg-orange-100 text-orange-700', delivered: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-700' };
+                    return colors[status] || 'bg-gray-100';
+                },
+                
+                formatDate(date) {
+                    if (!date) return '—';
+                    return new Date(date).toLocaleDateString('ar', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                },
+                
+                formatTime(date) {
+                    if (!date) return '';
+                    return new Date(date).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+                },
+                
+                selectClientForConversations(client) {
+                    this.selectedClient = client;
+                    this.convClientId = client.client_id;
+                    this.view = 'conversations';
+                    this.loadConversations();
+                },
+                
+                selectClientForOrders(client) {
+                    this.orderClientId = client.client_id;
+                    this.view = 'orders';
+                    this.loadOrders();
+                },
+                
+                // ═══ Onboarding ═══
+                addMenuItem() {
+                    this.onboardForm.menu_items.push({ name: '', description: '', price: '', category: '' });
+                },
+                removeMenuItem(index) {
+                    this.onboardForm.menu_items.splice(index, 1);
+                },
+                addFaq() {
+                    this.onboardForm.faqs.push({ question: '', answer: '' });
+                },
+                removeFaq(index) {
+                    this.onboardForm.faqs.splice(index, 1);
+                },
+                
+                async submitOnboard() {
+                    try {
+                        const res = await fetch('/api/onboard', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.onboardForm)
+                        });
+                        const data = await res.json();
+                        
+                        if (data.success) {
+                            this.onboardResult = { success: true, message: `تم تسجيل "${data.client_name}" بنجاح! المنيو تم فهرسته: ${data.menu_indexed}` };
+                            this.resetOnboardForm();
+                            await this.loadClients();
+                            await this.loadStats();
+                        } else {
+                            this.onboardResult = { success: false, message: data.error || 'حدث خطأ' };
+                        }
+                    } catch (err) {
+                        this.onboardResult = { success: false, message: err.message };
+                    }
+                },
+                
+                resetOnboardForm() {
+                    this.onboardForm = {
+                        client_name: '',
+                        business_type: 'restaurant',
+                        whatsapp_number: '',
+                        menu_items: [],
+                        faqs: [],
+                        meta_phone_id: '',
+                        meta_access_token: '',
+                        telegram_chat_id: ''
+                    };
+                },
+                
+                showOrderDetails(order) {
+                    alert(`رقم الطلب: ${order.order_number}\nالتفاصيل: ${order.order_details}\nالإجمالي: ${order.total} ج.م\nالحالة: ${order.status}`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

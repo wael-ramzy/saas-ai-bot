@@ -248,6 +248,126 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// DASHBOARD API ROUTES
+// ═══════════════════════════════════════════════════════════════
+const dashboardApi = require('./dashboard/api');
+
+// ── Stats ──
+app.get('/api/dashboard/stats', async (req, res) => {
+    try {
+        const stats = await dashboardApi.getPlatformStats();
+        res.json(stats);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Clients List ──
+app.get('/api/dashboard/clients', async (req, res) => {
+    try {
+        const clients = await dashboardApi.getClients();
+        res.json(clients);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Client Stats ──
+app.get('/api/dashboard/clients/:clientId/stats', async (req, res) => {
+    try {
+        const stats = await dashboardApi.getClientStats(req.params.clientId);
+        res.json(stats);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Client Conversations ──
+app.get('/api/dashboard/clients/:clientId/conversations', async (req, res) => {
+    try {
+        const convs = await dashboardApi.getConversations(req.params.clientId);
+        res.json(convs);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Conversation Messages ──
+app.get('/api/dashboard/conversations/:convId/messages', async (req, res) => {
+    try {
+        const data = await dashboardApi.getConversationMessages(req.params.convId);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Send Reply from Dashboard ──
+app.post('/api/dashboard/conversations/:convId/reply', async (req, res) => {
+    try {
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ error: 'message required' });
+        const result = await dashboardApi.sendDashboardReply(req.params.convId, message);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Client Orders ──
+app.get('/api/dashboard/clients/:clientId/orders', async (req, res) => {
+    try {
+        const orders = await dashboardApi.getOrders(req.params.clientId);
+        res.json(orders);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Update Order Status ──
+app.put('/api/dashboard/orders/:orderId', async (req, res) => {
+    try {
+        const data = await dashboardApi.updateOrder(req.params.orderId, req.body);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Client Customers ──
+app.get('/api/dashboard/clients/:clientId/customers', async (req, res) => {
+    try {
+        const customers = await dashboardApi.getCustomers(req.params.clientId);
+        res.json(customers);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ── Inbound Log ──
+app.get('/api/dashboard/logs', async (req, res) => {
+    try {
+        const logs = await dashboardApi.getInboundLog();
+        res.json(logs);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD STATIC FILES
+// ═══════════════════════════════════════════════════════════════
+app.use('/dashboard', express.static(path.join(__dirname, '..', 'public', 'dashboard')));
+app.get('/onboard', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '..', 'public', 'dashboard', 'onboard.html'), (err) => {
+        if (err) {
+            logger.error('Error sending onboard.html:', err);
+            res.status(500).json({ error: 'Failed to load onboard page' });
+        }
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════
 // START SERVER
 // ═══════════════════════════════════════════════════════════════
 const startServer = () => {
