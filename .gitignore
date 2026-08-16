@@ -1,11 +1,32 @@
-Set-Content -Path .gitignore -Value @"
+# ── Environment ──
 .env
 .env.*
+!.env.example
+config/.env
+
+# ── Dependencies ──
 node_modules/
+
+# ── WhatsApp Web.js (no longer used — legacy) ──
 .wwebjs_auth/
 .wwebjs_cache/
-data/
 *.qr.png
+
+# ── Logs ──
 logs/
 *.log
-"@
+npm-debug.log*
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── IDE ──
+.vscode/
+.idea/
+
+# ── PM2 ──
+.pm2/
+
+# ── Data ──
+data/

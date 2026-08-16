@@ -1,3 +1,9 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * ORDERS — طبقة إدارة الطلبات
+ * ═══════════════════════════════════════════════════════════════
+ */
+
 const supabase = require('./supabase');
 
 // ── توليد رقم تعريفي للطلب ──
@@ -9,7 +15,7 @@ const generateOrderNumber = () => {
 };
 
 // ── حفظ طلب جديد ──
-const saveOrder = async (clientId, orderData) => {
+const saveOrder = async (clientId, orderData, channel = null) => {
     const orderNumber = generateOrderNumber();
 
     const { data, error } = await supabase
@@ -21,9 +27,12 @@ const saveOrder = async (clientId, orderData) => {
             customer_name: orderData.name,
             order_details: orderData.order,
             address: orderData.address,
+            phone: orderData.phone,
             total: orderData.total,
             status: 'new',
-            is_addon: false
+            platform: orderData.platform || 'whatsapp',
+            is_addon: false,
+            channel_id: channel?.channel_id || null
         }])
         .select()
         .single();
@@ -136,7 +145,7 @@ const updateOrderStatus = async (orderId, status) => {
     const { data, error } = await supabase
         .from('orders')
         .update({ status })
-        .eq('id', orderId)
+        .eq('order_id', orderId)
         .select()
         .single();
 

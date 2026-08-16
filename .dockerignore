@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.git
+.env
+config/.env
+.env.*
+!.env.example
+logs
+.DS_Store
+README.md
+docs

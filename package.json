@@ -1,29 +1,31 @@
 {
-  "name": "whatsapp-saas",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
+  "name": "saas-ai-bot",
+  "version": "2.0.0",
+  "description": "Multi-tenant AI Bot Platform — Meta Cloud APIs (WhatsApp/Messenger/Instagram) with RAG",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop saas-ai-bot",
+    "pm2:logs": "pm2 logs saas-ai-bot",
+    "seed": "node scripts/seed.js",
+    "test": "echo \"Run: node --check src/server.js\" && exit 0"
   },
-  "keywords": [],
+  "keywords": ["ai-bot", "rag", "whatsapp", "messenger", "instagram", "supabase", "meta-cloud-api"],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",
     "axios": "^1.18.1",
+    "body-parser": "^1.20.3",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "node-cron": "^4.6.0",
-    "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "^1.34.7",
     "winston": "^3.19.0"
-  },
-  "allowScripts": {
-    "puppeteer@24.38.0": true
   }
 }

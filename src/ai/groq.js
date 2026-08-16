@@ -1,170 +1,156 @@
-const axios = require('axios');
-const path = require('path');
-require('dotenv').config({ 
-    path: path.join(__dirname, '..', '..', 'config', '.env') 
-});
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * AI ENGINE — محرك الذكاء الاصطناعي (Groq API)
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * هذه الطبقة هي قلب النظام:
+ * 1. تبني البرومبت الديناميكي حسب نوع النشاط
+ * 2. تستدعي نظام RAG لاسترجاع الأصناف ذات الصلة
+ * 3. تستدعي نظام التفضيلات
+ * 4. ترسل للـ AI (Groq) وتستقبل الرد
+ * 5. تفكك الـ ORDER_JSON
+ * 
+ * ─────────────────────────────────────────────────────────────
+ */
 
-const { buildMessages, updateMemory } = require('./memory');
+const axios = require('axios');
+const { retrieveContext } = require('../rag/retriever');
+const { buildPreferencesContext } = require('../db/preferences');
 const { parseOrder, cleanReply } = require('./parser');
+const { getSession, addMessage } = require('../services/session');
 const logger = require('../middleware/logger');
 
-// استيراد القوالب السلوكية المتاحة
-const basePrompt = require('./prompts/base');
-const restaurantPrompt = require('./prompts/restaurant');
-const clinicPrompt = require('./prompts/clinic');
-const storePrompt = require('./prompts/store');
+// ── استيراد القوالب السلوكية ──
+const { buildBasePrompt } = require('./prompts/base');
+const { buildRestaurantPrompt } = require('./prompts/restaurant');
+const { buildClinicPrompt } = require('./prompts/clinic');
+const { buildStorePrompt } = require('./prompts/store');
+const { buildSalonPrompt } = require('./prompts/salon');
+
+// ── مappable لأنواع الأنشطة ──
+const PROMPT_BUILDERS = {
+    'restaurant': buildRestaurantPrompt,
+    'مطعم':       buildRestaurantPrompt,
+    'clinic':     buildClinicPrompt,
+    'عيادة':      buildClinicPrompt,
+    'store':      buildStorePrompt,
+    'متجر':       buildStorePrompt,
+    'salon':      buildSalonPrompt,
+    'gym':        buildBasePrompt,
+    'other':      buildBasePrompt,
+    'base':       buildBasePrompt
+};
+
+// ── إعدادات Groq ──
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_TEMPERATURE = parseFloat(process.env.GROQ_TEMPERATURE || '0.4');
+const GROQ_MAX_TOKENS = parseInt(process.env.GROQ_MAX_TOKENS || '800');
 
 /**
- * 🔑 بناء البرومبت الديناميكي المخصص للعميل والنشاط من بيانات Supabase
+ * تحديد دالة بناء البرومبت حسب نوع النشاط
  */
-const buildSystemPromptForClient = (client, customerContext) => {
-    const clientName   = client?.client_name || 'المتجر';
-    const menuText     = client?.menu_text || 'البيانات والخدمات غير متوفرة حالياً';
-    const pdfUrl       = client?.pdf_menu_url || '';
-    const customPrompt = client?.system_prompt || '';
-    const businessType = (client?.business_type || 'base').toLowerCase();
-
-    // 1. تحديد دالة بناء البرومبت بحسب نوع النشاط
-    let builderFn;
-
-    switch (businessType) {
-        case 'restaurant':
-        case 'مطعم':
-            builderFn = restaurantPrompt.buildRestaurantPrompt || restaurantPrompt.buildBasePrompt;
-            break;
-        case 'clinic':
-        case 'عيادة':
-            builderFn = clinicPrompt.buildClinicPrompt || clinicPrompt.buildBasePrompt;
-            break;
-        case 'store':
-        case 'متجر':
-            builderFn = storePrompt.buildStorePrompt || storePrompt.buildBasePrompt;
-            break;
-        default:
-            builderFn = basePrompt.buildBasePrompt;
-    }
-
-    // احتياطي لو لم تكن الدالة متوفرة بنفس الاسم
-    if (typeof builderFn !== 'function') {
-        builderFn = basePrompt.buildBasePrompt;
-    }
-
-    // 2. توليد البرومبت الهيكلي للنشاط مع رابط الـ PDF وسياق العميل
-    let finalPrompt = builderFn(clientName, menuText, customerContext, pdfUrl);
-
-    // 3. إلحاق التعليمات المخصصة للتاجر إن وجِدت في Supabase
-    if (customPrompt && customPrompt.trim()) {
-        finalPrompt += `\n\n[تعليمات وسياسات خاصة جداً بهذا المكان]:\n${customPrompt.trim()}`;
-    }
-
-    return finalPrompt;
+const getPromptBuilder = (businessType) => {
+    const type = (businessType || 'base').toLowerCase().trim();
+    return PROMPT_BUILDERS[type] || buildBasePrompt;
 };
 
 /**
- * دالة استدعاء الذكاء الاصطناعي ومعالجة الرد والطلبات
+ * ═══ الدالة الرئيسية: معالجة رسالة الزبون ═══
+ * 
+ * @param {string} chatId - معرّف المحادثة (رقم الزبون)
+ * @param {string} userMessage - نص الرسالة
+ * @param {object} client - بيانات التاجر من Supabase
+ * @param {object} customer - بيانات الزبون (إن وجد)
+ * @param {object} preferences - تفضيلات الزبون (إن وجدت)
+ * @returns {Promise<{reply: string, order: object|null}>}
  */
-const getAIResponse = async (chatId, userMessage, client = {}, customer = null) => {
-    // 🔒 حماية: التأكد من وجود مفتاح API
+const getAIResponse = async (chatId, userMessage, client, customer = null, preferences = null) => {
+    const startTime = Date.now();
+
+    // ── 1. حماية: مفتاح API ──
     if (!process.env.GROQ_API_KEY) {
-        logger.error('[Groq AI] مفتاح GROQ_API_KEY غير معرف في ملف الـ .env');
+        logger.error('[AI] مفتاح GROQ_API_KEY غير معرّف');
         return {
-            reply: 'اعتذر منك يا فندم، النظام يمر بصيانة سريعة، يرجى المحاولة بعد قليل.',
+            reply: 'عذراً، النظام يمر بصيانة مؤقتة. يرجى المحاولة بعد قليل.',
             order: null
         };
     }
 
-    // ── 1. بناء سياق بيانات الزبون (يتضمن هاتف الدليفري) ──
-    let customerContext = '';
-
-    if (customer) {
-        const hasName      = customer.customer_name && customer.customer_name.trim();
-        const hasAddress   = customer.address && customer.address.trim();
-        const hasOrder     = customer.last_order && customer.last_order.trim();
-        const contactPhone = customer.contact_phone || '';
-
-        customerContext = `
-[بيانات العميل الحالية]
-الاسم: ${hasName ? customer.customer_name : 'غير معروف بعد'}
-العنوان المسجل: ${hasAddress ? customer.address : 'لا يوجد عنوان مسجل بعد'}
-رقم الهاتف المسجل للدليفري: ${contactPhone ? contactPhone : 'غير مسجل بعد'}
-آخر طلب: ${hasOrder ? customer.last_order : 'لا يوجد طلبات سابقة'}
-عدد الزيارات: ${customer.visit_count || 1}
-
-حالة العميل: ${
-            hasName && hasAddress && hasOrder ? 'مكتمل البيانات' :
-            hasOrder && !hasAddress           ? 'قديم — عنوانه ناقص' :
-            hasName  && !hasOrder             ? 'مسجل — بدون طلبات' :
-                                                'جديد'
-}`;
-    } else {
-        customerContext = `
-[بيانات العميل الحالية]
-الاسم: غير معروف بعد
-العنوان المسجل: لا يوجد عنوان مسجل بعد
-رقم الهاتف المسجل للدليفري: غير مسجل بعد
-آخر طلب: لا يوجد طلبات سابقة
-حالة العميل: جديد`;
+    // ── 2. استدعاء نظام RAG (استرجاع الأصناف ذات الصلة) ──
+    // هذا يوفر 70-80% من التوكنز مقارنة بتمرير المنيو كاملاً
+    let ragContext = '';
+    try {
+        ragContext = await retrieveContext(client.client_id, userMessage);
+    } catch (err) {
+        logger.warn('[AI] فشل RAG — سنستخدم fallback:', { error: err.message });
+        ragContext = '';
     }
 
-    // ── 2. تجهيز البرومبت الديناميكي وسلسلة المحادثة ──
-    const systemPrompt = buildSystemPromptForClient(client, customerContext);
-    const messages = buildMessages(chatId, systemPrompt, userMessage);
+    // ── 3. بناء سياق التفضيلات ──
+    const preferencesContext = preferences
+        ? buildPreferencesContext(preferences)
+        : '';
 
+    // ── 4. بناء البرومبت الديناميكي ──
+    const promptBuilder = getPromptBuilder(client.business_type);
+    const systemPrompt = promptBuilder(client, customer, ragContext, preferencesContext);
+
+    // ── 5. بناء سلسلة الرسائل (System + History + User) ──
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        ...getSession(chatId),
+        { role: 'user', content: userMessage }
+    ];
+
+    // ── 6. إرسال الطلب إلى Groq ──
     let response;
-
-    // ── 3. إرسال الطلب إلى Groq API ──
     try {
         response = await axios.post(
             'https://api.groq.com/openai/v1/chat/completions',
             {
-                model: 'llama-3.3-70b-versatile',
+                model: GROQ_MODEL,
                 messages,
-                temperature: 0.4,
-                max_tokens: 1000
+                temperature: GROQ_TEMPERATURE,
+                max_tokens: GROQ_MAX_TOKENS
             },
             {
                 headers: {
                     Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
                     'Content-Type': 'application/json'
                 },
-                timeout: 15000
+                timeout: 20000
             }
         );
     } catch (err) {
-        const statusCode = err.response?.status;
-        const errorMessage = err.response?.data?.error?.message || err.message;
-
-        logger.error('[Groq AI Error] فشل الاتصال بالذكاء الاصطناعي:', {
-            chatId,
-            status: statusCode || 'NETWORK_TIMEOUT',
-            error: errorMessage
+        logger.error('[AI] فشل الاتصال بـ Groq:', {
+            status: err.response?.status,
+            error: err.response?.data?.error?.message || err.message
         });
-
-        return { 
-            reply: 'اعتذر منك يا فندم، حصل مشكلة بسيطة في الخدمة، لحظات وأكون معاك.', 
-            order: null 
+        return {
+            reply: 'عذراً، حصل خطأ مؤقت في الخدمة. لحظات ونكون معاك.',
+            order: null
         };
     }
 
-    // ── 4. تفكيك وتنظيف الرد ومخرج الـ JSON ──
+    // ── 7. تفكيك الرد ──
+    const latency = Date.now() - startTime;
     try {
         const fullReply = response.data?.choices?.[0]?.message?.content || '';
-
         const order = parseOrder(fullReply);
         const reply = cleanReply(fullReply);
 
-        updateMemory(chatId, userMessage, fullReply);
+        // تحديث الذاكرة المحلية
+        addMessage(chatId, 'user', userMessage);
+        addMessage(chatId, 'assistant', reply);
+
+        logger.info('[AI] تم الرد بنجاح:', { latency_ms: latency, hasOrder: !!order });
 
         return { reply, order };
-    } catch (parseErr) {
-        logger.error('[Groq AI Error] خطأ أثناء تفكيك وتنظيف رد الذكاء الاصطناعي:', {
-            chatId,
-            error: parseErr.message
-        });
-
-        const rawContent = response.data?.choices?.[0]?.message?.content || '';
+    } catch (err) {
+        logger.error('[AI] خطأ في تفكيك الرد:', { error: err.message });
+        const raw = response.data?.choices?.[0]?.message?.content || '';
         return {
-            reply: rawContent.replace(/```json[\s\S]*?```/gi, '').trim() || 'تمام يا فندم، تحت أمرك.',
+            reply: raw.replace(/ORDER_JSON:\{[^\n]+\}/, '').trim() || 'تمام يا فندم.',
             order: null
         };
     }
