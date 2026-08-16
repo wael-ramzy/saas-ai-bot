@@ -16,6 +16,8 @@
 | **إشعارات تليجرام** | وصول فوري للطلبات على مجموعة التاجر |
 | **حماية** | Rate Limiting + Blacklist + Logging |
 | **Production Ready** | Docker + PM2 + Health Check |
+| **Dashboard** | واجهة ويب لإدارة المحادثات والطلبات والتجار |
+| **Onboarding** | صفحة تسجيل بسيط للتجار (تعليمة واحدة) |
 
 ---
 
@@ -81,6 +83,21 @@ docker run -d -p 3000:3000 --env-file config/.env saas-ai-bot
 | POST | `/api/onboard` | إضافة تاجر جديد + قناة + منيو |
 | POST | `/api/menu/index` | إعادة فهرسة المنيو (RAG) |
 | GET | `/api/stats` | إحصائيات المنصة |
+| GET | `/api/dashboard/stats` | إحصائيات Dashboard |
+| GET | `/api/dashboard/clients` | قائمة التجار |
+| GET | `/api/dashboard/clients/:clientId/conversations` | محادثات تاجر |
+| GET | `/api/dashboard/conversations/:convId/messages` | رسائل محادثة |
+| POST | `/api/dashboard/conversations/:convId/reply` | رد يدوي |
+| GET | `/api/dashboard/clients/:clientId/orders` | طلبات تاجر |
+| GET | `/api/dashboard/logs` | سجل الرسائل الواردة |
+
+---
+
+## Dashboard
+
+بعد تشغيل الخادم:
+- **Dashboard**: `http://your-domain/dashboard` — إدارة المحادثات والطلبات والإحصائيات
+- **Onboarding**: `http://your-domain/onboard` — صفحة تسجيل تاجر جديد (بسيطة)
 
 ---
 
